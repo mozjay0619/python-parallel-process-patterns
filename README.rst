@@ -1,4 +1,7 @@
 
+Repository of fun weekend projects, exploring and experimenting with various techniques and technologies, practicing building parallel computing tools for Python. 
+
+
 Patterns
 --------
 
