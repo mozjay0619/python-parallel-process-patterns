@@ -9,7 +9,7 @@ Patterns
 - multiprocessing_task_status_pattern
 - thread_pool_process_pattern
 - zmq_message_passing_server_client_pattern
-- dask_cluster_stateful_worker_pattern
-- ray_stateful_worker_pattern
+- dask_actor_cluster_pattern
+- ray_actor_pattern
 
 
