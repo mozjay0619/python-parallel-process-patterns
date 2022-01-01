@@ -1,23 +1,15 @@
-import os
-import time
-
-
 class ProgressBar:
-    def __init__(self):
+    def __init__(self, total):
 
         self.start_time = time.time()
-
-    def set_total(self, total):
-
         self.total = total
 
     def report(self, iteration):
 
-        self.print_progress_bar(iteration, self.total)
-
-    def completion_report(self):
-
-        self.print_progress_bar(self.total, self.total, suffix="Completed!")
+        if iteration < self.total:
+            self.print_progress_bar(iteration, self.total)
+        else:
+            self.print_progress_bar(self.total, self.total, suffix="Completed!")
 
     def print_progress_bar(self, iteration, total, suffix="", length=50, fill="█"):
 
@@ -30,13 +22,3 @@ class ProgressBar:
         print(f"\rProgress: |{bar}| {percent}% | {time_str}  {suffix}", end="\r")
         if iteration == total and suffix == "Completed!":
             print(f"\r", end="\n")
-
-
-def check_pid(pid):
-    """Check For the existence of a unix pid."""
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    else:
-        return True

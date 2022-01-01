@@ -34,7 +34,6 @@ class WorkerProcess(Process):
     out the requested computations in parallel. The user function can access its
     state if needed. The underscore is for when the user wishes to subclass the
     BaseWorker.
-
     Parameters
     ----------
     verbose : int
@@ -42,7 +41,6 @@ class WorkerProcess(Process):
         - 0: no output
         - 1: show message titles
         - 2: show message contents
-
     dataframe : Pandas dataframe or None
         Used if ``apply`` method is invoked.
     """

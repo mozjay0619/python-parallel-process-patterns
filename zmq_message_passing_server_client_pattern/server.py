@@ -73,11 +73,9 @@ class ServerProcess(Process):
     It uses asynchronous messaging queues to communicate with clients. Its main
     functionality is load balancing, which is implemented as a queue of LRU workers
     (refer to ``WorkerQueue``).
-
     Parameters
     ----------
     client_address : str
-
     verbose : int
     """
 

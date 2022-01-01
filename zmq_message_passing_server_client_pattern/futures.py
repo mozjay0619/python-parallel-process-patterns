@@ -30,53 +30,39 @@ class Futures:
     """Parallelization using ZeroMQ message passing framework. The architecture
     design is based on the Paranoid Pirate Pattern described in
     "https://zguide.zeromq.org/docs/chapter4/".
-
     This class is responsible for starting the daemon process for the proxy server
     and the daemon processes for the workers. The client runs on the main process.
     When the client submits tasks, they are queued in the server proxy server socket.
     The server will load balance the tasks to the LRU (least recently used) worker.
     Once the worker finishes the task, it will send the results message to the server,
     which will in turn send the message back to the client in the main process.
-
-
                                                                       worker (client)
     client <--asynch msg queue--> proxy server <--asynch msg queue--> worker (client)
                                                                       worker (client)
-
-
     There are 5 different ways to submit the user functions:
-
     - submit
     - submit_keyed
     - submit_stateful
     - apply
     - capply
-
     Refer to the method docstrings below and the accompanying jupyter notebook
     tutorial for their use cases.
-
     Parameters
     ----------
     n_workers : int
         The number of worker processes to use. Default is the number of available
         physical cores.
-
     start_method : str, Default
         The process start method. Available options: "fork", "spawn", and "forkserver".
         Default is "fork".
-
     verbose : int
         The levels of verboseness. Available options: 0, 1, 2. Default is 0.
-
     worker : WorkerProcess
         The subclass of WorkerProcess for custom initialization of the worker process.
-
     worker_args : list
         The positional arguments for the WorkerProcess.
-
     worker_kwargs : dict
         The keyword arguments for the WorkerProcess.
-
     n_retries : int
         The number of retries for any given task.
     """
@@ -132,7 +118,6 @@ class Futures:
     def start_workers(self, n_workers):
         """Start the worker processes, either the default WorkerProcess class
         or overridden WorkerProcess subclass.
-
         Parameters
         ----------
         n_workers : int
@@ -271,25 +256,19 @@ class Futures:
     def apply_to(self, dataframe, groupby=None, orderby=None):
         """Prepare the dataframe for parallel processing. This procedure
         depends on the process start method.
-
         If the startmethod is forking, then we will rely on the Unix COW
         to bring the dataframe to the subprocesses. Otherwise, we will write
         the dataframe on disk using feather and read it from subprocesses.
-
         If groupby is not None, then we will partition the dataframe by the
         groupby column, and the dict will be saved in global namespace in
         case of forking, or partitioned dataframes on disk using feather
         otherwise (the feather writing of partitions is done in parallel using
         forking).
-
         Parameters
         ----------
         dataframe : Pandas dataframe
-
         groupby : str
-
         orderby : str
-
         """
         self.mode = "pandas"
 
@@ -382,11 +361,9 @@ class Futures:
         """Apply the user function on the Pandas dataframe passed in the ``apply_to``
         method. The ``func`` method signature requires the dataframe as the first
         positional argument.
-
         Parameters
         ----------
         func : Python method
-
         __key__ : Python object
         """
         self.mode = "pandas"
@@ -409,20 +386,15 @@ class Futures:
         but the ``func`` method has an additional requirement that the return
         value is the numpy array with the same length as the dataframe. That
         array will be appended to the input dataframe with the name ``column``.
-
         You can also give the ``column`` a list of string names if the return value
         of the ``func`` is a multidimensional array. Then the dataframe will get
         multiple columns, using column names from the ``column`` list.
-
         Parameters
         ----------
         func : Python method
-
         column : str or list or str
-
         args : Python objects
             Positional arguments
-
         """
         self.sub_mode["column"] = True
 
@@ -437,13 +409,10 @@ class Futures:
 
     def submit(self, func, *args, __key__=None, __stateful__=False, **kwargs):
         """Pass in user func to compute in parallel.
-
         Parameters
         ----------
         func : Python method
-
         __key__ : Python object
-
         __stateful__ : boolean
             If True, the ``func`` method must have "self" as the first positional
             argument, where that self is the WorkerProcess instance.
@@ -461,11 +430,9 @@ class Futures:
 
     def submit_keyed(self, key, func, *args, __stateful__=False, **kwargs):
         """Same as ``submit``, but key positional argument is required.
-
         Parameters
         ----------
         key : Python object
-
         func : Python method
         """
         self.submit(func, *args, __key__=key, __stateful__=__stateful__, **kwargs)
@@ -475,22 +442,18 @@ class Futures:
         that "self" is the first positional argument. This "self" is the
         WorkerProcess instance. This method is same as ``submit`` with
         __stateful__ set to True.
-
         Parameters
         ----------
         func : Python method
-
         __key__ : Python object
         """
         self.submit(func, *args, __key__=__key__, __stateful__=True, **kwargs)
 
     def submit_stateful_keyed(self, key, func, *args, **kwargs):
         """Utility function combining ``submit_keyed`` and ``submit_stateful``.
-
         Parameters
         ----------
         func : Python method
-
         key : Python object
         """
         self.submit(func, *args, __key__=key, __stateful__=True, **kwargs)
@@ -500,11 +463,9 @@ class Futures:
         are serialized using msgpack. We will also attach 3 signals to the
         message: task mode (e.g. normal, pandas), process start method
         (e.g. fork), and statefulenss message.
-
         The return value is the message that will be passed over to the server,
         which will route the message in turn to the LRU workers. This message
         consists of a list of binary streams:
-
         0. key
         1. task mode
         2. process start method
@@ -565,11 +526,9 @@ class Futures:
         request message will be added to pending tasks list and the key will be added to the
         task keys list. Importantly, if the server client are not online, we will call the
         utility start method to start the daemon processes.
-
         Parameters
         ----------
         key : binary
-
         request : list of binaries
                         0. key
                         1. task mode
@@ -628,15 +587,12 @@ class Futures:
         """Start the infinite while loop to listen to the server for replies. Continue the
         loop while the sum of results, errors and dead workers is less than the total number
         of submitted tasks.
-
         There are two types of successful signals:
             - normal: the payload is deserialized using msgpack.
             - numpy: the numpy array is reconstructed using memoryview from the memory buffer
-
         There are two types of failure signals:
             - task failure: error caused by the user ``func``.
             - worker failure: error caused by death of the process itself.
-
         The server cannot see the worker death and therefore the client from main process
         will check if there are workers that are dead. If there are, it will start as many
         processes as they died. The tasks that were never completed by those processes will
@@ -883,14 +839,15 @@ class Futures:
 
     def get(self, keyed=False):
 
-        self.bar = ProgressBar(len(self._task_keys))
+        self.bar = ProgressBar()
+        self.bar.set_total(len(self._task_keys))
         self.bar.report(0)
 
         self._poll()
 
         if len(self.results) == len(self._task_keys):
 
-            self.bar.report(len(self._task_keys))
+            self.bar.completion_report()
 
         self.close()
 
