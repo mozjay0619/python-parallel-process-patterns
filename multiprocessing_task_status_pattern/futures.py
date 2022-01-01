@@ -1,10 +1,11 @@
-from .managed_processes import ManagedProcesses
-from .concurrent_futures_process_pool import ConcurrentFuturesProcessPool
-
-import psutil
-from .utils import contains_return_statement
 import multiprocessing
 import warnings
+
+import psutil
+
+from .concurrent_futures_process_pool import ConcurrentFuturesProcessPool
+from .managed_processes import ManagedProcesses
+from .utils import contains_return_statement
 
 
 def format_Warning(message, category, filename, lineno, line=""):

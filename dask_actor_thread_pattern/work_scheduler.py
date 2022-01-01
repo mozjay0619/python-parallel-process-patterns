@@ -52,8 +52,9 @@ class WorkerThread(Thread):
 
 class WorkProgressTracker(Thread):
     """Monitor the progress of task consumption from the queue and display
-    the progress in a progress bar. 
+    the progress in a progress bar.
     """
+
     def __init__(self, num_tasks, result_queue, work_done_event, interval=1.0):
         super(WorkProgressTracker, self).__init__()
 

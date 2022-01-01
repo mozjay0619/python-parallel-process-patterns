@@ -1,10 +1,9 @@
-from multiprocessing import Process, Manager, sharedctypes
-from collections import defaultdict
 import time
 import warnings
+from collections import defaultdict
+from multiprocessing import Manager, Process, sharedctypes
 
-from ..utils import printProgressBar
-from ..utils import Timeout
+from ..utils import Timeout, printProgressBar
 
 
 def format_Warning(message, category, filename, lineno, line=""):

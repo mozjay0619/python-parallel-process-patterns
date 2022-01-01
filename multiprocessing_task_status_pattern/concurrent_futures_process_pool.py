@@ -1,7 +1,7 @@
-from ..utils import printProgressBar
-
-from concurrent.futures import ProcessPoolExecutor
 import concurrent.futures
+from concurrent.futures import ProcessPoolExecutor
+
+from ..utils import printProgressBar
 
 
 class ConcurrentFuturesProcessPool:

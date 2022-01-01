@@ -1,7 +1,8 @@
+import ast
+import inspect
 import signal
 import textwrap
-import inspect
-import ast
+
 
 # https://stackoverflow.com/questions/2281850/timeout-function-if-it-takes-too-long-to-finish
 class Timeout:

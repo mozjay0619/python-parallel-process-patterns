@@ -1,13 +1,13 @@
-from queue import Queue
-import warnings
-import time
 import os
 import signal
-import warnings
-from threading import Event, Lock
 import threading
+import time
+import warnings
+from queue import Queue
+from threading import Event, Lock
 
 from .utils import printProgressBar
+
 
 def format_Warning(message, category, filename, lineno, line=""):
     return (

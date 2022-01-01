@@ -20,6 +20,7 @@ class DaskWorkerWrapper:
     1. Enforce once more the implementation of "run" method.
     2. Avoid needing to invoke ".result()" on the run method.
     """
+
     def __init__(self, worker):
         self.worker = worker
 
@@ -34,26 +35,27 @@ class WorkerManager:
     """Manages the local and remote (in case of using EMR cluster) Dask Actors (
     http://distributed.dask.org/en/stable/actors.html). In case the EMR cluster
     is used, it defaults to using both the local computer as well as the remote
-    computers. 
+    computers.
 
-    In cases of large scale computations on remote machines, it is better to 
+    In cases of large scale computations on remote machines, it is better to
     scatter the dataset and write them on the remote disks ahead of time. This is
     done using "scatter_data" method (Refer to the "scatter_data" method below).
-    We do not rely on the Dask's native scatter method because that seems to 
+    We do not rely on the Dask's native scatter method because that seems to
     disable the graphical display of the tasks on Dask status page, and so that
-    we can have the full control over data scattering protocol. But this requires 
+    we can have the full control over data scattering protocol. But this requires
     access to S3 buckets.
 
     But doing so will change the directory where the data can be found. In order
     to normalize the directory, we impose the following contract:
 
     1. You can only scatter an entire directory instead of individual files. So
-    put all the relevant data in a directory before scattering it. 
+    put all the relevant data in a directory before scattering it.
 
-    2. The Worker will receive a special field named "__root_dirpath__" upon 
+    2. The Worker will receive a special field named "__root_dirpath__" upon
     invoking the scatter_data method. This will point directly to the directory
-    that is written on each machine, both local and remote. 
+    that is written on each machine, both local and remote.
     """
+
     def __init__(self, dask_resource_config, local_root_dirpath=None):
 
         self.remote_reps = None
@@ -145,7 +147,7 @@ class WorkerManager:
         remote_worker_addrs = []
         for worker_addr, worker_info in remote_worker_infos.items():
             remote_reps[":".join(worker_addr.split(":")[0:2])] = worker_addr
-            # This remote address is ip address and port number of the worker. 
+            # This remote address is ip address and port number of the worker.
             remote_worker_addrs.append(worker_addr)
             # The path of the local directory of each worker split into list by "/".
             # Used below to get the longest common substring.
@@ -222,16 +224,16 @@ class WorkerManager:
 
     def scatter_data(self, target_dir, s3_url, object_name):
         """Sends the directory, whose path is "target_dir" argument, is written to the
-        disk that is local to each remote machine. Since there may be more than one 
+        disk that is local to each remote machine. Since there may be more than one
         worker process per machine, we write the data to a directory that is common to
-        all processes on that machine. Therefore, we only need to ask one process per 
-        machine to carry out this task, and we can have them all do it in parallel on 
+        all processes on that machine. Therefore, we only need to ask one process per
+        machine to carry out this task, and we can have them all do it in parallel on
         their respective machines.
 
         The process is as follows:
         1. Zip the local directory.
         2. Upload the zipped file to S3 bucket.
-        3. From each remote machine, download the zipped file and unzip it. (done by 
+        3. From each remote machine, download the zipped file and unzip it. (done by
         one worker process per machine)
         4. Erase the S3 bucket file.
         5. Update the "__root_dirpath__" field of each workers. (done for all worker

@@ -2,11 +2,10 @@ from ray.util import ActorPool
 
 
 class ActorPoolExtended(ActorPool):
-    
     def submit(self, key, method, *args, **kwargs):
-        """Some improvements over the native ``submit`` method found in 
+        """Some improvements over the native ``submit`` method found in
         ray source code:
-        
+
         https://github.com/ray-project/ray/blob/master/python/ray/util/actor_pool.py#L95:
 
         1. extend signature from (fn, value) to (key, method, *args, **kwargs)
@@ -21,12 +20,12 @@ class ActorPoolExtended(ActorPool):
             self._next_task_index += 1
         else:
             self._pending_submits.append((key, method, args, kwargs))
-            
+
     def _return_actor(self, actor):
         """Modified from the original codes found in ray source code:
-        
+
         https://github.com/ray-project/ray/blob/master/python/ray/util/actor_pool.py#L218
-        
+
         to accomodate the changes made to the ``submit`` function.
         """
         self._idle_actors.append(actor)
