@@ -1,5 +1,5 @@
 
-Repository of fun weekend projects, exploring and experimenting with various techniques and technologies, practicing building parallel computing tools for Python. 
+Repository of fun weekend projects: exploring, practicing, and experimenting with various techniques and technologies for building parallel computing tools for Python. The best way to learn it is to build it.
 
 
 Patterns
