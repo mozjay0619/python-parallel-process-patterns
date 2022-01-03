@@ -6,11 +6,16 @@ from dask_yarn import YarnCluster
 from .utils import (ProgressBar, get_host_ip_address, s3_delete_object,
                     s3_download_dir, s3_object_exists, s3_upload_dir)
 
-TIMEOUT = 30
+TIMEOUT = 10
 
 
 class BaseWorker:
     def __set_root_dirpath__(self, root_dirpath):
+        self.__root_dirpath__ = root_dirpath
+        return True
+
+    def __initialize_worker__(self, addr, root_dirpath):
+        self.__addr__ = addr
         self.__root_dirpath__ = root_dirpath
         return True
 
@@ -68,12 +73,6 @@ class WorkerManager:
 
     def start_workers(self, WorkerCls, *args, **kwargs):
 
-        if self.local_client:
-            print("Closing down previously connected local client.\n")
-
-        if self.remote_client:
-            print("Closing down previously connected remote client.\n")
-
         run_method = getattr(WorkerCls, "run", None)
         if not callable(run_method):
             raise NotImplementedError(
@@ -101,7 +100,9 @@ class WorkerManager:
 
     def start_remote_client(self, dask_resource_config):
 
-        print("\nStarting remote Dask client...")
+        self.close_remote_client()
+
+        print("Starting remote Dask client...")
 
         yarn_cluster = YarnCluster(
             n_workers=dask_resource_config["remote_n_workers"],
@@ -115,7 +116,8 @@ class WorkerManager:
 
         pb = ProgressBar(dask_resource_config["remote_n_workers"])
 
-        start_time = time.time()
+        last_time_worker_was_added = time.time()
+        prev_worker_cnt = 0
         while (
             len(remote_worker_infos.keys()) < dask_resource_config["remote_n_workers"]
         ):
@@ -123,13 +125,14 @@ class WorkerManager:
             time.sleep(0.1)
             pb.report(len(remote_worker_infos.keys()))
 
-            if (
-                time.time() - start_time
-                > dask_resource_config["remote_n_workers"] * 1.1 + TIMEOUT
-            ):
+            if prev_worker_cnt != len(remote_worker_infos.keys()):
+                last_time_worker_was_added = time.time()
+                prev_worker_cnt = len(remote_worker_infos.keys())
+
+            if time.time() - last_time_worker_was_added > TIMEOUT:
 
                 print(
-                    "\nUnable to allocate {} containers".format(
+                    "\n(Unable to allocate {} containers)".format(
                         dask_resource_config["remote_n_workers"]
                         - len(remote_worker_infos.keys())
                     )
@@ -170,14 +173,15 @@ class WorkerManager:
             future = self.remote_client.submit(
                 Worker, *args, **kwargs, actor=True, workers=remote_worker_addr
             )
-            remote_workers.append(future.result())
+            remote_workers.append([future.result(), remote_worker_addr])
 
-        for worker in remote_workers:
+        for worker, addr in remote_workers:
             assert (
-                worker.__set_root_dirpath__(self.remote_root_dirpath).result() == True
+                worker.__initialize_worker__(addr, self.remote_root_dirpath).result()
+                == True
             )
 
-        remote_workers = [DaskWorkerWrapper(worker) for worker in remote_workers]
+        remote_workers = [DaskWorkerWrapper(worker) for worker, addr in remote_workers]
 
         self.remote_reps = remote_reps
         self.remote_shared_root_dir = remote_shared_root_dir
@@ -186,7 +190,9 @@ class WorkerManager:
 
     def start_local_client(self, dask_resource_config):
 
-        print("Starting local Dask client...")
+        self.close_local_client()
+
+        print("Starting local Dask client...\n")
 
         local_cluster = LocalCluster(
             n_workers=dask_resource_config["local_n_workers"],
@@ -198,7 +204,7 @@ class WorkerManager:
         local_worker_infos = local_cluster.scheduler_info.get("workers", {})
         local_worker_infos.keys()
 
-        local_client = Client(address=local_cluster, timeout="2s")
+        local_client = Client(address=local_cluster, timeout="30s")
         return local_client, local_worker_infos
 
     def start_local_workers(self, local_worker_infos, Worker, *args, **kwargs):
@@ -213,12 +219,15 @@ class WorkerManager:
             future = self.local_client.submit(
                 Worker, *args, **kwargs, actor=True, workers=local_worker_addr
             )
-            local_workers.append(future.result())
+            local_workers.append([future.result(), local_worker_addr])
 
-        for worker in local_workers:
-            assert worker.__set_root_dirpath__(self.local_root_dirpath).result() == True
+        for worker, addr in local_workers:
+            assert (
+                worker.__initialize_worker__(addr, self.local_root_dirpath).result()
+                == True
+            )
 
-        local_workers = [DaskWorkerWrapper(worker) for worker in local_workers]
+        local_workers = [DaskWorkerWrapper(worker) for worker, addr in local_workers]
 
         return local_workers
 
@@ -246,12 +255,12 @@ class WorkerManager:
                 "That object_name already exists. Please use a different object_name"
             )
 
-        key = upload_dir(target_dir, s3_url, object_name)
+        key = s3_upload_dir(target_dir, s3_url, object_name)
 
         futures = []
         for ip_addr in self.remote_reps.values():
             future = self.remote_client.submit(
-                download_dir,
+                s3_download_dir,
                 self.remote_shared_root_dir,
                 s3_url,
                 key,
@@ -281,10 +290,23 @@ class WorkerManager:
 
         return self.remote_root_dirpath
 
+    def close_local_client(self):
+
+        if self.local_client and not self.local_client.status == "closed":
+            print("Closing down previously connected local client and local workers.\n")
+            self.local_client.cluster.close()
+            self.local_client.close()
+
+    def close_remote_client(self):
+
+        if self.remote_client and not self.remote_client.status == "closed":
+            print(
+                "Closing down previously connected remote client and remote workers.\n"
+            )
+            self.remote_client.cluster.close()
+            self.remote_client.close()
+
     def close(self):
 
-        if self.local_client:
-            self.local_client.shutdown()
-
-        if self.remote_client:
-            self.remote_client.shutdown()
+        self.close_local_client()
+        self.close_remote_client()
