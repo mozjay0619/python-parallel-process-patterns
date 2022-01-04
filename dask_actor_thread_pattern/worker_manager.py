@@ -13,11 +13,14 @@ class BaseWorker:
     def __set_root_dirpath__(self, root_dirpath):
         self.__root_dirpath__ = root_dirpath
         return True
-
+    
     def __initialize_worker__(self, addr, root_dirpath):
         self.__addr__ = addr
         self.__root_dirpath__ = root_dirpath
         return True
+    
+    def __getaddr__(self):
+        return self.__addr__
 
 
 class DaskWorkerWrapper:
@@ -28,6 +31,7 @@ class DaskWorkerWrapper:
 
     def __init__(self, worker):
         self.worker = worker
+        self.addr = worker.__getaddr__().result()
 
     def run(self, *args, **kwargs):
         return self.worker.run(*args, **kwargs).result()
@@ -99,7 +103,7 @@ class WorkerManager:
         self.workers = self.remote_workers + self.local_workers
 
     def start_remote_client(self, dask_resource_config):
-
+        
         self.close_remote_client()
 
         print("Starting remote Dask client...")
@@ -124,12 +128,12 @@ class WorkerManager:
 
             time.sleep(0.1)
             pb.report(len(remote_worker_infos.keys()))
-
+            
             if prev_worker_cnt != len(remote_worker_infos.keys()):
                 last_time_worker_was_added = time.time()
                 prev_worker_cnt = len(remote_worker_infos.keys())
 
-            if time.time() - last_time_worker_was_added > TIMEOUT:
+            if (time.time() - last_time_worker_was_added > TIMEOUT):
 
                 print(
                     "\n(Unable to allocate {} containers)".format(
@@ -177,8 +181,7 @@ class WorkerManager:
 
         for worker, addr in remote_workers:
             assert (
-                worker.__initialize_worker__(addr, self.remote_root_dirpath).result()
-                == True
+                worker.__initialize_worker__(addr, self.remote_root_dirpath).result() == True
             )
 
         remote_workers = [DaskWorkerWrapper(worker) for worker, addr in remote_workers]
@@ -189,7 +192,7 @@ class WorkerManager:
         return remote_workers
 
     def start_local_client(self, dask_resource_config):
-
+        
         self.close_local_client()
 
         print("Starting local Dask client...\n")
@@ -222,10 +225,7 @@ class WorkerManager:
             local_workers.append([future.result(), local_worker_addr])
 
         for worker, addr in local_workers:
-            assert (
-                worker.__initialize_worker__(addr, self.local_root_dirpath).result()
-                == True
-            )
+            assert worker.__initialize_worker__(addr, self.local_root_dirpath).result() == True
 
         local_workers = [DaskWorkerWrapper(worker) for worker, addr in local_workers]
 
@@ -289,24 +289,23 @@ class WorkerManager:
             worker.__set_root_dirpath__(self.remote_root_dirpath)
 
         return self.remote_root_dirpath
-
+    
     def close_local_client(self):
-
-        if self.local_client and not self.local_client.status == "closed":
+        
+        if self.local_client and not self.local_client.status=='closed':
             print("Closing down previously connected local client and local workers.\n")
             self.local_client.cluster.close()
             self.local_client.close()
 
     def close_remote_client(self):
-
-        if self.remote_client and not self.remote_client.status == "closed":
-            print(
-                "Closing down previously connected remote client and remote workers.\n"
-            )
+        
+        if self.remote_client and not self.remote_client.status=='closed':
+            print("Closing down previously connected remote client and remote workers.\n")
             self.remote_client.cluster.close()
             self.remote_client.close()
-
+    
     def close(self):
-
+        
         self.close_local_client()
         self.close_remote_client()
+        
